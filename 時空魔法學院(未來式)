@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時空魔法學院 - 雙軌修練版 (流暢打字版)</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        
+        .bg-basic { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+        .bg-advanced { background: linear-gradient(135deg, #2e1065 0%, #000000 100%); }
+        
+        .theme-tutorial { background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%); }
+        .theme-will { background: linear-gradient(135deg, #991b1b 0%, #ef4444 100%); }
+        .theme-begoingto { background: linear-gradient(135deg, #166534 0%, #22c55e 100%); }
+        .theme-mix { background: linear-gradient(135deg, #6b21a8 0%, #d8b4fe 100%); }
+        
+        .theme-adv-will { background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%); border-color: #fca5a5; }
+        .theme-adv-begoingto { background: linear-gradient(135deg, #14532d 0%, #15803d 100%); border-color: #86efac; }
+        .theme-adv-mix { background: linear-gradient(135deg, #581c87 0%, #7e22ce 100%); border-color: #d8b4fe; }
+
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-combo { animation: combo-pop 0.5s ease-out; }
+        
+        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        @keyframes combo-pop { 0% { transform: scale(0.5) rotate(-10deg); opacity: 0; } 50% { transform: scale(1.2) rotate(10deg); opacity: 1; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+        
+        .highlight-time {
+            color: #c2410c; 
+            background-color: #ffedd5; 
+            padding: 0 0.25rem;
+            border-radius: 0.25rem;
+            font-weight: 800;
+            border-bottom: 2px solid #f97316;
+            display: inline-block;
+        }
+        
+        .highlight-time-adv {
+            color: #fcd34d;
+            font-weight: bold;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 select-none m-0 p-0">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- Icons ---
+        const IconBase = ({ children, className, size = 24, color = "currentColor" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Star = (props) => <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></IconBase>;
+        const Award = (props) => <IconBase {...props}><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></IconBase>;
+        const Wand2 = (props) => <IconBase {...props}><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z" /><path d="m14 7 3 3" /><path d="M5 6v4" /><path d="M19 14v4" /><path d="M10 2v2" /><path d="M7 8H3" /><path d="M21 16h-4" /></IconBase>;
+        const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></IconBase>;
+        const XCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></IconBase>;
+        const RefreshCcw = (props) => <IconBase {...props}><path d="M3 2v6h6" /><path d="M21 12A9 9 0 0 0 6 5.3L3 8" /><path d="M21 22v-6h-6" /><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7" /></IconBase>;
+        const ArrowLeft = (props) => <IconBase {...props}><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></IconBase>;
+        const Lock = (props) => <IconBase {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></IconBase>;
+        const Lightbulb = (props) => <IconBase {...props}><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5 0-2.2-1.8-4-4-4s-4 1.8-4 4c0 1.5.5 2.5 1.5 3.5.8.8 1.3 1.5 1.5 2.5" /><path d="M9 18h6" /><path d="M10 22h4" /></IconBase>;
+        const GraduationCap = (props) => <IconBase {...props}><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></IconBase>;
+        const Medal = (props) => <IconBase {...props}><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></IconBase>;
+        const Shield = (props) => <IconBase {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></IconBase>;
+        const Zap = (props) => <IconBase {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></IconBase>;
+
+        // --- 題庫資料 (進階版 Level 3 已移除縮寫與困難輸入) ---
+        const questionBank = {
+            basic: {
+                tutorial: {
+                    level1: [
+                        { id: 't1', type: 'choice', question: "哪一個字代表「未來」的時間？", hint: "Tomorrow 是明天的意思", sentence: "_____ is in the future.", options: [{text:"Tomorrow",correct:true}, {text:"Yesterday",correct:false}, {text:"Now",correct:false}] },
+                        { id: 't2', type: 'choice', question: "想要用「未來式」，要找哪個紅色關鍵字？", hint: "Next week 代表下週", sentence: "I will go _____.", options: [{text:"last week",correct:false}, {text:"next week",correct:true}, {text:"every day",correct:false}] },
+                        { id: 't3', type: 'choice', question: "Will 很強壯，後面的動作要？", hint: "Will + 原形動詞 (不加 s, 不加 ing)", sentence: "I will _____.", options: [{text:"go",correct:true}, {text:"going",correct:false}, {text:"goes",correct:false}] },
+                        { id: 't4', type: 'choice', question: "I (我) 的 Be going to 變身是？", hint: "口訣：I 配 am", sentence: "I _____ going to eat.", options: [{text:"am",correct:true}, {text:"is",correct:false}, {text:"are",correct:false}] },
+                        { id: 't5', type: 'choice', question: "She (她) 的 Be going to 變身是？", hint: "口訣：單人配 is", sentence: "She _____ going to sleep.", options: [{text:"am",correct:false}, {text:"are",correct:false}, {text:"is",correct:true}] },
+                    ]
+                },
+                will: {
+                    level1: [
+                        { id: 'w1-1', type: 'choice', question: "*明天*我__打棒球。", hint: "明天 (tomorrow) 用 will", sentence: "I _____ play baseball *tomorrow*.", options: [{text:"will",correct:true}, {text:"is",correct:false}, {text:"are",correct:false}] },
+                        { id: 'w1-2', type: 'choice', question: "她*待會兒*會幫你。", hint: "will 後面動詞要原形", sentence: "She will _____ you *later*.", options: [{text:"helps",correct:false}, {text:"help",correct:true}, {text:"helping",correct:false}] },
+                        { id: 'w1-3', type: 'choice', question: "他們*將要*去動物園。", hint: "will 不需要 Be 動詞", sentence: "They _____ go to the zoo.", options: [{text:"are",correct:false}, {text:"will",correct:true}, {text:"is",correct:false}] },
+                        { id: 'w1-4', type: 'choice', question: "他*明天*會來嗎？", hint: "問句把 Will 放最前面", sentence: "_____ he come *tomorrow*?", options: [{text:"Will",correct:true}, {text:"Is",correct:false}, {text:"Are",correct:false}] },
+                        { id: 'w1-5', type: 'choice', question: "它*待會*就會下雨了。", hint: "will 後面接原形動詞", sentence: "It will _____ *later*.", options: [{text:"rains",correct:false}, {text:"rain",correct:true}, {text:"raining",correct:false}] },
+                    ],
+                    level2: [
+                        { id: 'w2-1', type: 'scramble', question: "我*將會*煮晚餐。", hint: "主角(I) + will + 動作(cook)", parts: [{text:"I",color:"bg-blue-600"}, {text:"will",color:"bg-red-600"}, {text:"cook",color:"bg-yellow-600"}, {text:"dinner.",color:"bg-slate-500"}] },
+                        { id: 'w2-2', type: 'scramble', question: "她*明天*會跳舞。", hint: "時間(tomorrow)放在最後面", parts: [{text:"She",color:"bg-blue-600"}, {text:"will",color:"bg-red-600"}, {text:"dance",color:"bg-yellow-600"}, {text:"*tomorrow*.",color:"bg-orange-600"}] },
+                        { id: 'w2-3', type: 'scramble', question: "我們*待會*就去。", hint: "We will go...", parts: [{text:"We",color:"bg-blue-600"}, {text:"will",color:"bg-red-600"}, {text:"go",color:"bg-yellow-600"}, {text:"*later*.",color:"bg-orange-600"}] },
+                        { id: 'w2-4', type: 'scramble', question: "他*將會*買一台車。", hint: "Will + buy", parts: [{text:"He",color:"bg-blue-600"}, {text:"will",color:"bg-red-600"}, {text:"buy",color:"bg-yellow-600"}, {text:"a car.",color:"bg-slate-500"}] },
+                        { id: 'w2-5', type: 'scramble', question: "Tom *將會*打電話給你。", hint: "Tom will call...", parts: [{text:"Tom",color:"bg-blue-600"}, {text:"will",color:"bg-red-600"}, {text:"call",color:"bg-yellow-600"}, {text:"you.",color:"bg-slate-500"}] },
+                    ],
+                    level3: [
+                        { id: 'w3-1', type: 'fill', question: "他*明天*會去參觀。", sentence: ["He", "input", "visit *tomorrow*."], answer: "will", hint: "將要... (w開頭)", choices: ["will", "is", "go"] },
+                        { id: 'w3-2', type: 'fill', question: "我*將會*幫助你。", sentence: ["I", "will", "input", "you."], answer: "help", hint: "原形動詞 (不加s)", choices: ["helping", "help", "helps"] },
+                        { id: 'w3-3', type: 'fill', question: "我們*會*贏。", sentence: ["We", "input", "win."], answer: "will", hint: "簡單未來式 (will)", choices: ["are", "will", "is"] },
+                        { id: 'w3-4', type: 'fill', question: "她*待會*會睡覺。", sentence: ["She", "will", "input", "*later*."], answer: "sleep", hint: "睡覺 (原形)", choices: ["sleeping", "sleeps", "sleep"] },
+                        { id: 'w3-5', type: 'fill', question: "It will _____ (rain) *tomorrow*.", sentence: ["It", "will", "input", "*tomorrow*."], answer: "rain", hint: "will 後面不變身", choices: ["rain", "rains", "raining"] },
+                    ]
+                },
+                begoingto: {
+                    level1: [
+                        { id: 'b1-1', type: 'choice', question: "我*打算*讀一本書。", hint: "I 的好朋友是 am", sentence: "I _____ going to read.", options: [{text:"am",correct:true}, {text:"is",correct:false}, {text:"are",correct:false}] },
+                        { id: 'b1-2', type: 'choice', question: "她*打算*做一個蛋糕。", hint: "She (單人) 配 is", sentence: "She _____ going to make a cake.", options: [{text:"am",correct:false}, {text:"is",correct:true}, {text:"are",correct:false}] },
+                        { id: 'b1-3', type: 'choice', question: "我們*打算*去玩。", hint: "We (多人) 配 are", sentence: "We _____ going to play.", options: [{text:"am",correct:false}, {text:"will",correct:false}, {text:"are",correct:true}] },
+                        { id: 'b1-4', type: 'choice', question: "Tom *打算*去睡覺。", hint: "Tom 是一個人，用 is", sentence: "Tom _____ going to sleep.", options: [{text:"is",correct:true}, {text:"are",correct:false}, {text:"will",correct:false}] },
+                        { id: 'b1-5', type: 'choice', question: "他們*打算*買什麼？", hint: "They (他們) 用 Are", sentence: "_____ they going to buy?", options: [{text:"Is",correct:false}, {text:"Are",correct:true}, {text:"Will",correct:false}] },
+                    ],
+                    level2: [
+                        { id: 'b2-1', type: 'scramble', question: "我*打算*去跑。", hint: "I am going to...", parts: [{text:"I",color:"bg-blue-600"}, {text:"am",color:"bg-green-600"}, {text:"going to",color:"bg-green-700"}, {text:"run.",color:"bg-yellow-600"}] },
+                        { id: 'b2-2', type: 'scramble', question: "她*打算*去飛。", hint: "She is going to...", parts: [{text:"She",color:"bg-blue-600"}, {text:"is",color:"bg-green-600"}, {text:"going to",color:"bg-green-700"}, {text:"fly.",color:"bg-yellow-600"}] },
+                        { id: 'b2-3', type: 'scramble', question: "他們*打算*去吃。", hint: "They are going to...", parts: [{text:"They",color:"bg-blue-600"}, {text:"are",color:"bg-green-600"}, {text:"going to",color:"bg-green-700"}, {text:"eat.",color:"bg-yellow-600"}] },
+                        { id: 'b2-4', type: 'scramble', question: "我們*打算*看電視。", hint: "We are going to...", parts: [{text:"We",color:"bg-blue-600"}, {text:"are",color:"bg-green-600"}, {text:"going to",color:"bg-green-700"}, {text:"watch TV.",color:"bg-slate-500"}] },
+                        { id: 'b2-5', type: 'scramble', question: "他*打算*讀書。", hint: "He is going to...", parts: [{text:"He",color:"bg-blue-600"}, {text:"is",color:"bg-green-600"}, {text:"going to",color:"bg-green-700"}, {text:"study.",color:"bg-yellow-600"}] },
+                    ],
+                    level3: [
+                        { id: 'b3-1', type: 'fill', question: "我*打算*回家。", sentence: ["I", "input", "going to go home."], answer: "am", hint: "I 的 Be動詞是 am", choices: ["is", "am", "are"] },
+                        { id: 'b3-2', type: 'fill', question: "她*打算*買書。", sentence: ["She", "input", "going to buy books."], answer: "is", hint: "She 是單人 (is)", choices: ["are", "am", "is"] },
+                        { id: 'b3-3', type: 'fill', question: "他們*打算*打籃球。", sentence: ["They", "input", "going to play basketball."], answer: "are", hint: "They 是多人 (are)", choices: ["is", "will", "are"] },
+                        { id: 'b3-4', type: 'fill', question: "We are _____ to cook.", sentence: ["We", "are", "input", "to cook."], answer: "going", hint: "be g_____ to", choices: ["go", "going", "goes"] },
+                        { id: 'b3-5', type: 'fill', question: "John _____ going to swim.", sentence: ["John", "input", "going to swim."], answer: "is", hint: "John 是一個人 (is)", choices: ["is", "are", "am"] },
+                    ]
+                },
+                mix: {
+                    level1: [
+                        { id: 'm1-1', type: 'choice', question: "*下週*我會去日本。", hint: "沒有 going to，只要 Will", sentence: "I _____ go to Japan *next week*.", options: [{text:"will",correct:true}, {text:"am",correct:false}, {text:"going to",correct:false}] },
+                        { id: 'm1-2', type: 'choice', question: "小心！*快要*下雨了！", hint: "看到 going to，前面找 Be", sentence: "It _____ going to rain!", options: [{text:"will",correct:false}, {text:"is",correct:true}, {text:"are",correct:false}] },
+                        { id: 'm1-3', type: 'choice', question: "她*明天*將要考試。", hint: "She 配 is", sentence: "She _____ going to have a test.", options: [{text:"will",correct:false}, {text:"am",correct:false}, {text:"is",correct:true}] },
+                        { id: 'm1-4', type: 'choice', question: "我們會想念你的。", hint: "簡單未來式用 will", sentence: "We _____ miss you.", options: [{text:"will",correct:true}, {text:"are",correct:false}, {text:"is",correct:false}] },
+                        { id: 'm1-5', type: 'choice', question: "你*打算*做什麼？", hint: "You (你) 配 are", sentence: "What _____ you going to do?", options: [{text:"will",correct:false}, {text:"are",correct:true}, {text:"is",correct:false}] },
+                    ],
+                    level2: [
+                        { id: 'm2-1', type: 'scramble', question: "我*將會*打電話給你。(Will)", hint: "Will 放在動作前面", parts: [{text:"I",color:"bg-blue-600"}, {text:"will",color:"bg-red-600"}, {text:"call",color:"bg-yellow-600"}, {text:"you.",color:"bg-slate-500"}] },
+                        { id: 'm2-2', type: 'scramble', question: "她*打算*做披薩。(Going to)", hint: "She is going to...", parts: [{text:"She",color:"bg-blue-600"}, {text:"is",color:"bg-green-600"}, {text:"going to",color:"bg-green-700"}, {text:"make pizza.",color:"bg-slate-500"}] },
+                        { id: 'm2-3', type: 'scramble', question: "他們*明天*會來。(Will)", hint: "They will come...", parts: [{text:"They",color:"bg-blue-600"}, {text:"will",color:"bg-red-600"}, {text:"come",color:"bg-yellow-600"}, {text:"*tomorrow*.",color:"bg-orange-600"}] },
+                        { id: 'm2-4', type: 'scramble', question: "我們*打算*看電影。(Going to)", hint: "We are going to...", parts: [{text:"We",color:"bg-blue-600"}, {text:"are",color:"bg-green-600"}, {text:"going to",color:"bg-green-700"}, {text:"watch a movie.",color:"bg-slate-500"}] },
+                        { id: 'm2-5', type: 'scramble', question: "It will not rain. (否定)", hint: "not 放在 will 後面", parts: [{text:"It",color:"bg-blue-600"}, {text:"will",color:"bg-red-600"}, {text:"not",color:"bg-gray-800"}, {text:"rain.",color:"bg-yellow-600"}] },
+                    ],
+                    level3: [
+                        { id: 'm3-1', type: 'fill', question: "我*打算*去台北。(Going to)", sentence: ["I", "input", "going to Taipei."], answer: "am", hint: "I 的 Be動詞", choices: ["am", "will", "is"] },
+                        { id: 'm3-2', type: 'fill', question: "他*將會*很開心。(Will)", sentence: ["He", "input", "be happy."], answer: "will", hint: "簡單未來式 (w...)", choices: ["is", "will", "going"] },
+                        { id: 'm3-3', type: 'fill', question: "他們*打算*打掃。(Going to)", sentence: ["They", "input", "going to clean."], answer: "are", hint: "They 是多人", choices: ["is", "are", "am"] },
+                        { id: 'm3-4', type: 'fill', question: "Sara *明天*會煮飯。(Will)", sentence: ["Sara", "will", "input", "*tomorrow*."], answer: "cook", hint: "煮飯 (原形)", choices: ["cook", "cooks", "cooking"] },
+                        { id: 'm3-5', type: 'fill', question: "你*打算*去哪裡？", sentence: ["Where", "input", "you going to go?"], answer: "are", hint: "You 的 Be動詞", choices: ["is", "are", "will"] },
+                    ]
+                }
+            },
+            advanced: {
+                will: {
+                    level1: [
+                        { id: 'aw1-1', type: 'choice', question: "【預測】明天會下雨 (Prediction)。", hint: "單純的未來預測通常用 Will", sentence: "It _____ rain *tomorrow*.", options: [{text:"will",correct:true}, {text:"is",correct:false}, {text:"does",correct:false}] },
+                        { id: 'aw1-2', type: 'choice', question: "【承諾】我保證我不會遲到 (Promise)。", hint: "不會 = will not (won't)", sentence: "I promise I _____ be late.", options: [{text:"won't",correct:true}, {text:"don't",correct:false}, {text:"not",correct:false}] },
+                        { id: 'aw1-3', type: 'choice', question: "【請求】請你把鹽巴遞給我好嗎？ (Request)", hint: "請求句型用 Will you...", sentence: "_____ you pass me the salt, please?", options: [{text:"Will",correct:true}, {text:"Do",correct:false}, {text:"Are",correct:false}] },
+                        { id: 'aw1-4', type: 'choice', question: "【意願】我也許會去參加派對。", hint: "will 用於表達意願或可能性", sentence: "Maybe I _____ go to the party.", options: [{text:"will",correct:true}, {text:"am",correct:false}, {text:"going to",correct:false}] },
+                        { id: 'aw1-5', type: 'choice', question: "【未來狀態】他明年就14歲了。", hint: "單純描述未來事實用 Will", sentence: "He _____ be 14 *next year*.", options: [{text:"will",correct:true}, {text:"is",correct:false}, {text:"goes",correct:false}] },
+                    ],
+                    level2: [
+                        { id: 'aw2-1', type: 'scramble', question: "【造句】你願意嫁給我嗎？ (Question)", hint: "Will you...", parts: [{text:"Will",color:"bg-slate-700"}, {text:"you",color:"bg-slate-700"}, {text:"marry",color:"bg-slate-700"}, {text:"me?",color:"bg-slate-700"}] },
+                        { id: 'aw2-2', type: 'scramble', question: "【造句】這不會很痛。(Negative)", hint: "It won't...", parts: [{text:"It",color:"bg-slate-700"}, {text:"won't",color:"bg-slate-700"}, {text:"hurt",color:"bg-slate-700"}, {text:"much.",color:"bg-slate-700"}] },
+                        { id: 'aw2-3', type: 'scramble', question: "【造句】我想我們將會贏。(Belief)", hint: "I think we...", parts: [{text:"I",color:"bg-slate-700"}, {text:"think",color:"bg-slate-700"}, {text:"we",color:"bg-slate-700"}, {text:"will",color:"bg-slate-700"}, {text:"win.",color:"bg-slate-700"}] },
+                        { id: 'aw2-4', type: 'scramble', question: "【造句】她下週會很忙。", hint: "She will be...", parts: [{text:"She",color:"bg-slate-700"}, {text:"will",color:"bg-slate-700"}, {text:"be",color:"bg-slate-700"}, {text:"busy",color:"bg-slate-700"}, {text:"*next week*.",color:"bg-slate-700"}] },
+                        { id: 'aw2-5', type: 'scramble', question: "【造句】我會幫你拿包包。(Offer)", hint: "I will...", parts: [{text:"I",color:"bg-slate-700"}, {text:"will",color:"bg-slate-700"}, {text:"carry",color:"bg-slate-700"}, {text:"your",color:"bg-slate-700"}, {text:"bags.",color:"bg-slate-700"}] },
+                    ],
+                    level3: [ // No choices (Typing, simplified)
+                        { id: 'aw3-1', type: 'fill', question: "【填空】我將會打電話給你。", sentence: ["I", "input", "call you *later*."], answer: "will", hint: "未來式助動詞 w..." },
+                        { id: 'aw3-2', type: 'fill', question: "【填空】我們不會忘記的。(否定)", sentence: ["We will", "input", "forget."], answer: "not", hint: "否定詞 n..." },
+                        { id: 'aw3-3', type: 'fill', question: "【填空】你會來嗎？(問句)", sentence: ["input", "you come?"], answer: "Will", hint: "問句開頭 W..." },
+                        { id: 'aw3-4', type: 'fill', question: "【填空】他將會*停留*在這裡。", sentence: ["He will", "input", "here."], answer: "stay", hint: "停留 (原形) s..." },
+                        { id: 'aw3-5', type: 'fill', question: "【填空】這將會很有趣。", sentence: ["It", "input", "be fun."], answer: "will", hint: "簡單未來式 w..." },
+                    ]
+                },
+                begoingto: {
+                    level1: [
+                        { id: 'ab1-1', type: 'choice', question: "【計畫】我打算學習法文 (Plan)。", hint: "打算 = am going to", sentence: "I _____ learn French.", options: [{text:"am going to",correct:true}, {text:"will",correct:false}, {text:"am",correct:false}] },
+                        { id: 'ab1-2', type: 'choice', question: "【否定計畫】他們不打算搬家 (Negative Plan)。", hint: "They 的否定是 aren't", sentence: "They _____ move house.", options: [{text:"aren't going to",correct:true}, {text:"won't",correct:false}, {text:"don't",correct:false}] },
+                        { id: 'ab1-3', type: 'choice', question: "【問句】她打算買什麼？ (Question)", hint: "She 的 Be 動詞是 is", sentence: "What _____ she going to buy?", options: [{text:"is",correct:true}, {text:"will",correct:false}, {text:"does",correct:false}] },
+                        { id: 'ab1-4', type: 'choice', question: "【計畫】我們打算去旅行。", hint: "We 的 Be 動詞是 are", sentence: "We _____ travel.", options: [{text:"are going to",correct:true}, {text:"will",correct:false}, {text:"do",correct:false}] },
+                        { id: 'ab1-5', type: 'choice', question: "【跡象】看！快下雨了 (Evidence)。", hint: "有跡象顯示即將發生 = is going to", sentence: "Look! It _____ rain.", options: [{text:"is going to",correct:true}, {text:"will",correct:false}, {text:"is",correct:false}] },
+                    ],
+                    level2: [
+                        { id: 'ab2-1', type: 'scramble', question: "【造句】我打算拜訪巴黎。(Plan)", hint: "I'm going to...", parts: [{text:"I'm",color:"bg-slate-700"}, {text:"going",color:"bg-slate-700"}, {text:"to",color:"bg-slate-700"}, {text:"visit",color:"bg-slate-700"}, {text:"Paris.",color:"bg-slate-700"}] },
+                        { id: 'ab2-2', type: 'scramble', question: "【造句】你打算做什麼？(Question)", hint: "What are you...", parts: [{text:"What",color:"bg-slate-700"}, {text:"are",color:"bg-slate-700"}, {text:"you",color:"bg-slate-700"}, {text:"going",color:"bg-slate-700"}, {text:"to",color:"bg-slate-700"}, {text:"do?",color:"bg-slate-700"}] },
+                        { id: 'ab2-3', type: 'scramble', question: "【造句】樹快要倒了！(Evidence)", hint: "The tree is...", parts: [{text:"The tree",color:"bg-slate-700"}, {text:"is",color:"bg-slate-700"}, {text:"going",color:"bg-slate-700"}, {text:"to",color:"bg-slate-700"}, {text:"fall!",color:"bg-slate-700"}] },
+                        { id: 'ab2-4', type: 'scramble', question: "【造句】他們不打算看電視。", hint: "They aren't...", parts: [{text:"They",color:"bg-slate-700"}, {text:"aren't",color:"bg-slate-700"}, {text:"going",color:"bg-slate-700"}, {text:"to",color:"bg-slate-700"}, {text:"watch",color:"bg-slate-700"}, {text:"TV.",color:"bg-slate-700"}] },
+                        { id: 'ab2-5', type: 'scramble', question: "【造句】她打算去哪裡？", hint: "Where is she...", parts: [{text:"Where",color:"bg-slate-700"}, {text:"is",color:"bg-slate-700"}, {text:"she",color:"bg-slate-700"}, {text:"going",color:"bg-slate-700"}, {text:"to",color:"bg-slate-700"}, {text:"go?",color:"bg-slate-700"}] },
+                    ],
+                    level3: [
+                        { id: 'ab3-1', type: 'fill', question: "【填空】我的朋友們打算辦派對。", sentence: ["My friends", "input", "going to have a party."], answer: "are", hint: "Friends 是複數，配 a..." },
+                        { id: 'ab3-2', type: 'fill', question: "【填空】我正打算用功讀書。", sentence: ["I am", "input", "to study hard."], answer: "going", hint: "be g_____ to (打算)" },
+                        { id: 'ab3-3', type: 'fill', question: "【填空】不會下雪 (否定)。", sentence: ["It is", "input", "going to snow."], answer: "not", hint: "否定詞 n..." },
+                        { id: 'ab3-4', type: 'fill', question: "【填空】他們打算來嗎？", sentence: ["input", "they going to come?"], answer: "Are", hint: "They 的 Be 動詞" },
+                        { id: 'ab3-5', type: 'fill', question: "【填空】她打算煮晚餐。", sentence: ["She", "input", "_____", "to cook dinner."], answer: "is going", hint: "is g... (兩字)" }, // Modified for 2 words input? No, standard text input supports spaces.
+                    ]
+                },
+                mix: {
+                    level1: [
+                        { id: 'am1-1', type: 'choice', question: "【立即決定】門鈴響了。我___去開門。", hint: "說話當下的決定 = will", sentence: "I _____ get it.", options: [{text:"will",correct:true}, {text:"am going to",correct:false}, {text:"am getting",correct:false}] },
+                        { id: 'am1-2', type: 'choice', question: "【既定計畫】昨天買好票了。我們___去看電影。", hint: "已經安排好的計畫 = are going to", sentence: "We _____ watch a movie.", options: [{text:"are going to",correct:true}, {text:"will",correct:false}, {text:"go to",correct:false}] },
+                        { id: 'am1-3', type: 'choice', question: "【個人預測】我覺得她___喜歡這個禮物。", hint: "覺得/猜測 = will", sentence: "I think she _____ like the gift.", options: [{text:"will",correct:true}, {text:"is going to",correct:false}, {text:"likes",correct:false}] },
+                        { id: 'am1-4', type: 'choice', question: "【跡象預測】車開太快了！它___撞車！", hint: "眼前的跡象 = is going to", sentence: "It _____ crash!", options: [{text:"is going to",correct:true}, {text:"will",correct:false}, {text:"goes to",correct:false}] },
+                        { id: 'am1-5', type: 'choice', question: "【主動幫忙】你的包包看起來很重，我___幫你。", hint: "主動提議 = will", sentence: "I _____ help you.", options: [{text:"will",correct:true}, {text:"am going to",correct:false}, {text:"am",correct:false}] },
+                    ],
+                    level2: [
+                        { id: 'am2-1', type: 'scramble', question: "【造句】我們打算明年去旅行。(Plan)", hint: "We are going to...", parts: [{text:"We",color:"bg-slate-700"}, {text:"are",color:"bg-slate-700"}, {text:"going",color:"bg-slate-700"}, {text:"to",color:"bg-slate-700"}, {text:"travel",color:"bg-slate-700"}, {text:"*next year*.",color:"bg-slate-700"}] },
+                        { id: 'am2-2', type: 'scramble', question: "【造句】我會永遠愛你。(Promise)", hint: "I will always...", parts: [{text:"I",color:"bg-slate-700"}, {text:"will",color:"bg-slate-700"}, {text:"always",color:"bg-slate-700"}, {text:"love",color:"bg-slate-700"}, {text:"you.",color:"bg-slate-700"}] },
+                        { id: 'am2-3', type: 'scramble', question: "【造句】你覺得會下雨嗎？(Opinion)", hint: "Do you think...", parts: [{text:"Do",color:"bg-slate-700"}, {text:"you",color:"bg-slate-700"}, {text:"think",color:"bg-slate-700"}, {text:"it",color:"bg-slate-700"}, {text:"will",color:"bg-slate-700"}, {text:"rain?",color:"bg-slate-700"}] },
+                        { id: 'am2-4', type: 'scramble', question: "【造句】我打算成為一名醫生。(Intention)", hint: "I am going to...", parts: [{text:"I",color:"bg-slate-700"}, {text:"am",color:"bg-slate-700"}, {text:"going",color:"bg-slate-700"}, {text:"to",color:"bg-slate-700"}, {text:"be",color:"bg-slate-700"}, {text:"a doctor.",color:"bg-slate-700"}] },
+                        { id: 'am2-5', type: 'scramble', question: "【造句】你會來，對吧？(Tag Question)", hint: "You will come...", parts: [{text:"You",color:"bg-slate-700"}, {text:"will",color:"bg-slate-700"}, {text:"come,",color:"bg-slate-700"}, {text:"won't",color:"bg-slate-700"}, {text:"you?",color:"bg-slate-700"}] },
+                    ],
+                    level3: [
+                        { id: 'am3-1', type: 'fill', question: "【填空】門鈴響了，我___去開門。", sentence: ["I", "input", "get it."], answer: "will", hint: "立即決定 (w...)" },
+                        { id: 'am3-2', type: 'fill', question: "【填空】我___做一個蛋糕(已有計畫)。", sentence: ["I", "input", "make a cake."], answer: "am going to", hint: "am g... t... (三個字)" },
+                        { id: 'am3-3', type: 'fill', question: "【填空】2050年，汽車___會飛(預測)。", sentence: ["Cars", "input", "fly."], answer: "will", hint: "未來式助動詞 w..." },
+                        { id: 'am3-4', type: 'fill', question: "【填空】小心！你___掉下去了！(跡象)", sentence: ["You", "input", "fall!"], answer: "are going to", hint: "are g... t... (三個字)" },
+                        { id: 'am3-5', type: 'fill', question: "【填空】___ 我把窗戶打開嗎？(提議)", sentence: ["input", "I open the window?"], answer: "Shall", hint: "Shall (S...)" },
+                    ]
+                }
+            }
+        };
+
+        const App = () => {
+            const [mode, setMode] = useState(null); // 'basic' | 'advanced'
+            const [gameState, setGameState] = useState('mode-select'); // mode-select, home, level-select, playing, result
+            const [selectedTopic, setSelectedTopic] = useState(null);
+            const [selectedLevel, setSelectedLevel] = useState(1);
+            
+            // 進度儲存 - 基礎與進階分開
+            const [progressBasic, setProgressBasic] = useState(() => JSON.parse(localStorage.getItem('magicProgress_Basic')) || { tutorial: false, will: 1, begoingto: 1, mix: 1 });
+            const [progressAdv, setProgressAdv] = useState(() => JSON.parse(localStorage.getItem('magicProgress_Adv')) || { will: 1, begoingto: 1, mix: 1 }); 
+            
+            // 分數儲存
+            const [scoreBasic, setScoreBasic] = useState(() => parseInt(localStorage.getItem('magicScore_Basic')) || 0);
+            const [scoreAdv, setScoreAdv] = useState(() => parseInt(localStorage.getItem('magicScore_Adv')) || 0);
+
+            // 遊戲狀態
+            const [currentQIndex, setCurrentQIndex] = useState(0);
+            const [currentLevelScore, setCurrentLevelScore] = useState(0);
+            const [feedback, setFeedback] = useState(null);
+            const [showHint, setShowHint] = useState(false);
+            const [streak, setStreak] = useState(0); 
+            const [hasRetried, setHasRetried] = useState(false); 
+            
+            const [scrambleAnswer, setScrambleAnswer] = useState([]);
+            const [scramblePool, setScramblePool] = useState([]);
+            const [inputValue, setInputValue] = useState("");
+
+            useEffect(() => { localStorage.setItem('magicProgress_Basic', JSON.stringify(progressBasic)); }, [progressBasic]);
+            useEffect(() => { localStorage.setItem('magicProgress_Adv', JSON.stringify(progressAdv)); }, [progressAdv]);
+            useEffect(() => { localStorage.setItem('magicScore_Basic', scoreBasic.toString()); }, [scoreBasic]);
+            useEffect(() => { localStorage.setItem('magicScore_Adv', scoreAdv.toString()); }, [scoreAdv]);
+
+            const currentProgress = mode === 'basic' ? progressBasic : progressAdv;
+            const currentScore = mode === 'basic' ? scoreBasic : scoreAdv;
+            
+            const getCurrentQuestions = () => {
+                if (!selectedTopic || !mode) return [];
+                const bank = questionBank[mode];
+                if (mode === 'basic' && selectedTopic === 'tutorial') return bank.tutorial.level1;
+                return bank[selectedTopic][`level${selectedLevel}`];
+            };
+
+            const currentQuestions = getCurrentQuestions();
+            const currentQ = currentQuestions[currentQIndex];
+
+            const renderHighlightedText = (text) => {
+                if (typeof text !== 'string') return text;
+                const parts = text.split(/(\*[^*]+\*)/g);
+                return parts.map((part, index) => {
+                    if (part.startsWith('*') && part.endsWith('*')) {
+                        return <span key={index} className={mode === 'basic' ? "highlight-time" : "highlight-time-adv"}>{part.slice(1, -1)}</span>;
+                    }
+                    return part;
+                });
+            };
+
+            const startGame = (topic, level) => {
+                setSelectedTopic(topic);
+                setSelectedLevel(level);
+                setGameState('playing');
+                setCurrentQIndex(0);
+                setCurrentLevelScore(0);
+                setStreak(0);
+                setHasRetried(false);
+                setFeedback(null);
+                setShowHint(false);
+                setInputValue("");
+                setScrambleAnswer([]);
+                
+                if (topic !== 'tutorial' && level === 2) {
+                     const q = questionBank[mode][topic].level2[0];
+                     if (q) setScramblePool([...q.parts].sort(() => Math.random() - 0.5));
+                }
+            }
+
+            useEffect(() => {
+                if (gameState === 'playing' && currentQ) {
+                    setFeedback(null);
+                    setInputValue("");
+                    setShowHint(false);
+                    setHasRetried(false);
+                    setScrambleAnswer([]);
+                    if (selectedTopic !== 'tutorial' && selectedLevel === 2) {
+                        setScramblePool([...currentQ.parts].sort(() => Math.random() - 0.5));
+                    }
+                }
+            }, [currentQIndex, gameState]);
+
+            const handleAnswer = (isCorrect) => {
+                if (!isCorrect) {
+                    setStreak(0);
+                    setHasRetried(true);
+                    setFeedback({ type: 'wrong', msg: mode === 'basic' ? '哎呀！答錯了' : 'Incorrect. Try again.', combo: 0 });
+                    setTimeout(() => { setFeedback(null); setShowHint(true); }, 1500);
+                } else {
+                    if (hasRetried) {
+                        setFeedback({ type: 'correct', msg: mode === 'basic' ? '答對了！(重試不計分)' : 'Correct! (No points for retry)', combo: 0, pointsAdded: 0 });
+                    } else {
+                        const newStreak = streak + 1;
+                        let points = 10;
+                        if (newStreak > 1) points += (newStreak - 1) * 2;
+                        
+                        setStreak(newStreak);
+                        setCurrentLevelScore(s => s + points);
+                        if (mode === 'basic') setScoreBasic(s => s + points);
+                        else setScoreAdv(s => s + points);
+
+                        setFeedback({ type: 'correct', msg: mode === 'basic' ? '太棒了！答對了！' : 'Excellent! Correct!', combo: newStreak > 1 ? newStreak : 0, pointsAdded: points });
+                    }
+                    setTimeout(() => {
+                        if (currentQIndex < currentQuestions.length - 1) {
+                            setCurrentQIndex(prev => prev + 1);
+                        } else {
+                            if (mode === 'basic') {
+                                if (selectedTopic === 'tutorial') {
+                                    setProgressBasic(p => ({...p, tutorial: true}));
+                                } else if (selectedLevel === progressBasic[selectedTopic]) {
+                                    setProgressBasic(p => ({...p, [selectedTopic]: Math.min(p[selectedTopic] + 1, 4)}));
+                                }
+                            } else {
+                                if (selectedLevel === progressAdv[selectedTopic]) {
+                                    setProgressAdv(p => ({...p, [selectedTopic]: Math.min(p[selectedTopic] + 1, 4)}));
+                                }
+                            }
+                            setGameState('result');
+                        }
+                    }, 1500);
+                }
+            };
+
+            const checkAllCompleted = () => {
+                if (mode === 'basic') return progressBasic.tutorial && progressBasic.will >= 4 && progressBasic.begoingto >= 4 && progressBasic.mix >= 4;
+                else return progressAdv.will >= 4 && progressAdv.begoingto >= 4 && progressAdv.mix >= 4;
+            };
+
+            // Renders
+            const renderModeSelection = () => (
+                <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-6 gap-8">
+                    <div className="text-center animate-pop">
+                        <Wand2 size={80} className="mx-auto mb-4 text-purple-400" />
+                        <h1 className="text-5xl font-bold mb-4">時空魔法學院</h1>
+                        <p className="text-xl text-gray-400">請選擇你的入學分院</p>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-8 w-full max-w-4xl">
+                        <button onClick={() => { setMode('basic'); setGameState('home'); }} className="bg-basic border-4 border-blue-500 hover:border-yellow-400 p-8 rounded-3xl shadow-2xl hover:scale-105 transition group relative overflow-hidden">
+                            <div className="absolute inset-0 bg-blue-500/10 group-hover:bg-blue-500/20 transition"></div>
+                            <Star size={64} className="mb-4 text-blue-300" />
+                            <h2 className="text-3xl font-bold mb-2">初級魔法學院</h2>
+                            <p className="text-blue-200">適合初學者，包含基礎教學與中文提示。</p>
+                            <span className="mt-6 inline-block bg-blue-600 px-6 py-2 rounded-full font-bold">進入基礎班</span>
+                        </button>
+                        <button onClick={() => { setMode('advanced'); setGameState('home'); }} className="bg-advanced border-4 border-purple-600 hover:border-yellow-400 p-8 rounded-3xl shadow-2xl hover:scale-105 transition group relative overflow-hidden">
+                            <div className="absolute inset-0 bg-purple-900/20 group-hover:bg-purple-900/30 transition"></div>
+                            <div className="flex justify-between items-start">
+                                <Zap size={64} className="mb-4 text-purple-300" />
+                                <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">HARD</span>
+                            </div>
+                            <h2 className="text-3xl font-bold mb-2">時空奧秘塔</h2>
+                            <p className="text-purple-200">適合進階學徒，挑戰全手寫咒語。</p>
+                            <span className="mt-6 inline-block bg-purple-700 px-6 py-2 rounded-full font-bold">挑戰進階班</span>
+                        </button>
+                    </div>
+                </div>
+            );
+
+            const renderHome = () => {
+                const isBasic = mode === 'basic';
+                const isTutorialDone = isBasic ? progressBasic.tutorial : true;
+                
+                return (
+                    <div className={`flex flex-col items-center justify-center min-h-screen text-white p-6 relative py-10 ${isBasic ? 'bg-basic' : 'bg-advanced'}`}>
+                        <button onClick={() => setGameState('mode-select')} className="absolute top-6 left-6 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full flex items-center gap-2 text-sm z-10"><ArrowLeft size={16}/> 切換學院</button>
+                        <div className="absolute top-4 right-4 bg-black/30 px-6 py-2 rounded-full border border-yellow-400/50 flex items-center gap-3 z-10">
+                            <Award className="text-yellow-400" />
+                            <span className="font-mono text-xl font-bold text-yellow-100">積分: {currentScore}</span>
+                        </div>
+
+                        <div className="mb-8 text-center animate-pop mt-16 md:mt-0">
+                            {isBasic ? <Wand2 size={80} className="mx-auto mb-4 text-blue-400" /> : <Shield size={80} className="mx-auto mb-4 text-purple-400" />}
+                            <h1 className="text-5xl font-bold mb-2 tracking-wider">{isBasic ? "初級魔法學院" : "時空奧秘塔"}</h1>
+                            <p className="text-xl opacity-70">{isBasic ? "學習基礎魔法，掌握時間的奧秘" : "精準運用時態，挑戰極限預言"}</p>
+                        </div>
+                        
+                        <div className="w-full max-w-5xl flex flex-col gap-8">
+                            {isBasic && (
+                                <button onClick={() => startGame('tutorial', 1)} className={`w-full p-8 rounded-2xl shadow-xl transform transition flex items-center justify-between group relative overflow-hidden border-4 ${!isTutorialDone ? 'bg-blue-600 border-yellow-400 hover:scale-[1.02] animate-float' : 'bg-slate-700 border-slate-600 hover:bg-slate-600'}`}>
+                                    <div className="flex items-center gap-6">
+                                        <div className="bg-white/20 p-4 rounded-full"><GraduationCap size={48} className="text-white" /></div>
+                                        <div className="text-left">
+                                            <h2 className="text-3xl font-bold mb-2">{!isTutorialDone ? "新手訓練營 (由此開始)" : "魔法入門課 (複習)"}</h2>
+                                            <p className="text-blue-100 text-lg">{!isTutorialDone ? "通過測驗，解鎖修練地圖！" : "已完成訓練，隨時可回來複習。"}</p>
+                                        </div>
+                                    </div>
+                                    {!isTutorialDone && <div className="bg-yellow-400 text-blue-900 px-6 py-2 rounded-full font-bold text-xl animate-pulse">START ►</div>}
+                                    {isTutorialDone && <CheckCircle className="text-green-400" size={40} />}
+                                </button>
+                            )}
+
+                            <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-500 ${!isTutorialDone ? 'opacity-50 grayscale pointer-events-none' : 'opacity-100'}`}>
+                                {['will', 'begoingto', 'mix'].map(topic => {
+                                    const level = currentProgress[topic];
+                                    const isMastered = level >= 4;
+                                    let themeClass = "";
+                                    if (isBasic) {
+                                        themeClass = topic === 'will' ? 'bg-red-700 hover:bg-red-600 border-red-900' : topic === 'begoingto' ? 'bg-green-700 hover:bg-green-600 border-green-900' : 'bg-purple-700 hover:bg-purple-600 border-purple-900';
+                                    } else {
+                                        themeClass = topic === 'will' ? 'theme-adv-will hover:scale-105' : topic === 'begoingto' ? 'theme-adv-begoingto hover:scale-105' : 'theme-adv-mix hover:scale-105';
+                                    }
+
+                                    return (
+                                        <button key={topic} onClick={() => { setSelectedTopic(topic); setGameState('level-select'); }} className={`${themeClass} border-b-8 text-white p-8 rounded-2xl shadow-xl transform transition flex flex-col items-center group relative overflow-hidden`}>
+                                            {topic === 'will' && <Star size={48} className={`mb-4 ${isMastered ? 'text-yellow-300 animate-pulse' : 'text-white'}`} />}
+                                            {topic === 'begoingto' && <RefreshCcw size={48} className={`mb-4 ${isMastered ? 'text-yellow-300 animate-pulse' : 'text-white'}`} />}
+                                            {topic === 'mix' && <Award size={48} className={`mb-4 ${isMastered ? 'text-yellow-300 animate-pulse' : 'text-white'}`} />}
+                                            <h2 className="text-2xl font-bold mb-2 uppercase">{topic === 'will' ? 'Will Zone' : topic === 'begoingto' ? 'Going To Zone' : 'Mix Challenge'}</h2>
+                                            <p className="opacity-80 font-mono">
+                                                {isMastered ? <span className="font-bold text-yellow-300">MASTERED!</span> : `Level: ${level}/3`}
+                                            </p>
+                                            {!isTutorialDone && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Lock size={48} className="text-white/50" /></div>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderGame = () => {
+                if (!currentQ) return <div>Loading...</div>;
+                
+                const isBasic = mode === 'basic';
+                const themeClass = isBasic ? (selectedTopic === 'tutorial' ? 'theme-tutorial' : selectedTopic === 'will' ? 'theme-will' : selectedTopic === 'begoingto' ? 'theme-begoingto' : 'theme-mix') : 'bg-gray-800'; 
+
+                return (
+                    <div className={`flex flex-col min-h-screen ${isBasic ? 'bg-slate-50' : 'bg-gray-900 text-gray-200'}`}>
+                        <div className={`p-4 shadow-md flex justify-between items-center text-white ${themeClass}`}>
+                            <button onClick={() => setGameState(selectedTopic === 'tutorial' ? 'home' : 'level-select')} className="hover:bg-white/20 p-2 rounded-lg flex items-center gap-1 font-bold"><ArrowLeft size={20} /> Quit</button>
+                            <div className="flex flex-col items-center">
+                                <div className="font-bold text-xl">{selectedTopic === 'tutorial' ? "Tutorial" : `${mode === 'advanced' ? 'Adv.' : ''} Level ${selectedLevel}`} - Q{currentQIndex + 1}</div>
+                                {streak > 1 && <div className="text-yellow-300 font-bold text-sm animate-pulse">🔥 {streak} COMBO!</div>}
+                            </div>
+                            <div className="font-mono bg-black/20 px-4 py-1 rounded-full font-bold flex items-center gap-2"><Award size={16} className="text-yellow-400"/> {currentLevelScore}</div>
+                        </div>
+
+                        <div className="flex-1 flex flex-col items-center justify-center p-4 py-8 max-w-4xl mx-auto w-full">
+                            <div className={`${isBasic ? 'bg-white text-gray-800' : 'bg-gray-800 text-white border-gray-700'} rounded-3xl p-8 shadow-xl w-full mb-8 min-h-[300px] flex flex-col items-center justify-center relative border-4 border-transparent`}>
+                                <h2 className="text-3xl font-bold mb-6 text-center leading-relaxed">{renderHighlightedText(currentQ.question)}</h2>
+                                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${showHint ? 'max-h-20 opacity-100 mb-6' : 'max-h-0 opacity-0 mb-0'}`}>
+                                    <div className="text-base text-gray-600 bg-yellow-50 px-4 py-2 rounded-full border border-yellow-200 flex items-center gap-2 shadow-sm"><Lightbulb className="text-yellow-500" size={20} /><span className="font-bold">Hint: {currentQ.hint}</span></div>
+                                </div>
+
+                                {/* Level 1 & Tutorial: Choice */}
+                                {(selectedTopic === 'tutorial' || selectedLevel === 1) && (
+                                    <div className="w-full max-w-2xl">
+                                        <div className={`text-2xl text-center mb-8 font-mono p-6 rounded-xl border-2 border-dashed font-bold ${isBasic ? 'bg-gray-50 border-gray-200 text-blue-900' : 'bg-gray-900 border-gray-600 text-green-300'}`}>{renderHighlightedText(currentQ.sentence)}</div>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            {currentQ.options.map((opt, idx) => (
+                                                <button key={idx} disabled={feedback !== null} onClick={() => handleAnswer(opt.correct)} className={`${isBasic ? 'bg-slate-600 hover:bg-slate-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white text-xl font-bold py-6 rounded-xl hover:scale-105 transform transition shadow-lg disabled:opacity-50 disabled:transform-none`}>{opt.text}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Level 2: Scramble */}
+                                {selectedLevel === 2 && (
+                                    <div className="w-full">
+                                        <div className={`${isBasic ? 'bg-gray-100' : 'bg-gray-700'} min-h-[100px] rounded-xl p-6 mb-8 flex flex-wrap gap-3 items-center justify-center border-2 border-dashed ${isBasic ? 'border-gray-300' : 'border-gray-500'}`}>
+                                            {scrambleAnswer.map((item, idx) => <button key={idx} onClick={() => {
+                                                const newAns = [...scrambleAnswer]; newAns.splice(idx, 1); setScrambleAnswer(newAns);
+                                                setScramblePool([...scramblePool, item]);
+                                            }} className={`${item.color} text-white px-5 py-3 rounded-lg font-bold text-xl shadow-md animate-pop`}>{renderHighlightedText(item.text)}</button>)}
+                                        </div>
+                                        <div className="flex flex-wrap gap-3 justify-center mb-8">
+                                            {scramblePool.map((item, idx) => <button key={idx} onClick={() => {
+                                                const newPool = [...scramblePool]; newPool.splice(idx, 1); setScramblePool(newPool);
+                                                setScrambleAnswer([...scrambleAnswer, item]);
+                                            }} className={`${item.color} text-white px-5 py-3 rounded-lg font-bold text-xl shadow-lg hover:scale-105 transition`}>{renderHighlightedText(item.text)}</button>)}
+                                        </div>
+                                        <button onClick={() => {
+                                            const ans = scrambleAnswer.map(p => p.text).join(" "); const cor = currentQ.parts.map(p => p.text).join(" ");
+                                            handleAnswer(ans === cor);
+                                        }} disabled={feedback !== null || scramblePool.length > 0} className={`w-full py-4 rounded-xl font-bold text-2xl text-white transition shadow-lg ${scramblePool.length > 0 ? 'bg-gray-400' : (isBasic ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700')}`}>Check</button>
+                                    </div>
+                                )}
+
+                                {/* Level 3: Fill (Basic has choices, Advanced is Typing) */}
+                                {selectedLevel === 3 && (
+                                    <div className="w-full text-center max-w-2xl">
+                                        <div className="text-3xl mb-10 flex flex-wrap justify-center items-center gap-3 font-mono leading-loose">
+                                            {currentQ.sentence.map((part, idx) => (
+                                                part === "input" ? (
+                                                    <div key={idx} className={`border-b-4 ${inputValue ? 'border-green-500 text-green-500' : (isBasic ? 'border-blue-500 text-blue-900' : 'border-indigo-500 text-indigo-200')} ${isBasic ? 'bg-blue-50' : 'bg-gray-900'} w-40 text-center font-bold px-2 py-1 rounded-t min-h-[3rem] flex items-center justify-center`}>{inputValue || "?"}</div>
+                                                ) : <span key={idx}>{renderHighlightedText(part)}</span>
+                                            ))}
+                                        </div>
+                                        
+                                        {/* Basic Mode Word Bank */}
+                                        {isBasic && currentQ.choices && (
+                                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                                <div className="flex gap-4 justify-center">
+                                                    {currentQ.choices.map((word, idx) => (
+                                                        <button key={idx} onClick={() => {
+                                                            if(feedback) return;
+                                                            if(word.toLowerCase() === currentQ.answer.toLowerCase()) { setInputValue(word); handleAnswer(true); } else { handleAnswer(false); }
+                                                        }} disabled={feedback !== null} className="bg-white border-2 border-slate-300 hover:border-blue-500 text-slate-700 text-xl font-bold px-6 py-3 rounded-xl transition shadow-sm hover:shadow-md">{word}</button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Advanced Mode Typing */}
+                                        {!isBasic && (
+                                            <div className="flex flex-col gap-4">
+                                                <input 
+                                                    type="text" 
+                                                    autoFocus
+                                                    className="bg-gray-700 border-2 border-gray-600 text-white text-center text-2xl p-4 rounded-xl focus:border-indigo-500 outline-none"
+                                                    placeholder="Type answer here..." 
+                                                    value={inputValue}
+                                                    onChange={(e) => setInputValue(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if(e.key === 'Enter' && inputValue && !feedback) {
+                                                            if(inputValue.toLowerCase().trim() === currentQ.answer.toLowerCase()) { handleAnswer(true); } else { handleAnswer(false); }
+                                                        }
+                                                    }}
+                                                    disabled={feedback !== null}
+                                                />
+                                                <div className="text-gray-400 text-sm">按 Enter 送出</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Feedback Overlay */}
+                                {feedback && (
+                                    <div className="absolute inset-0 bg-white/95 rounded-3xl flex flex-col items-center justify-center animate-pop z-10 backdrop-blur-sm text-gray-800">
+                                        {feedback.type === 'correct' ? 
+                                            <div className="text-center">
+                                                <CheckCircle size={80} className="text-green-500 mb-4 mx-auto" />
+                                                {feedback.combo > 1 && <div className="text-3xl font-black text-yellow-500 mb-2 animate-combo italic">COMBO x{feedback.combo}!</div>}
+                                                <div className="text-xl font-bold text-green-600">{feedback.pointsAdded > 0 ? `+${feedback.pointsAdded} Points` : 'Retry (0 Pts)'}</div>
+                                            </div> 
+                                            : <div className="animate-shake flex flex-col items-center"><XCircle size={80} className="text-red-500 mb-4" /></div>
+                                        }
+                                        <h3 className={`text-3xl font-bold mb-2 ${feedback.type === 'correct' ? 'text-green-700' : 'text-red-700'}`}>{feedback.msg}</h3>
+                                        {feedback.type === 'wrong' && <p className="text-gray-500 mt-2">Hint unlocking...</p>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderResult = () => {
+                const isGrandMaster = checkAllCompleted();
+                const isTopicMastered = selectedLevel === 3 && currentProgress[selectedTopic] >= 4;
+                
+                if (isGrandMaster) {
+                    return (
+                        <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-6 relative overflow-hidden py-10">
+                            <div className="text-center animate-pop z-10">
+                                <div className="inline-block p-4 rounded-full bg-yellow-400 mb-6 shadow-[0_0_50px_rgba(250,204,21,0.5)] animate-float"><Award size={120} className="text-black" /></div>
+                                <h2 className="text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500">{mode === 'basic' ? "恭喜畢業！" : "時空領主誕生！"}</h2>
+                                <p className="text-2xl mb-8 text-gray-300">{mode === 'basic' ? "你已通過基礎修練！" : "你已征服所有時空難題！"}</p>
+                                <div className="bg-white/10 backdrop-blur-md p-8 rounded-2xl border border-white/20 mb-8"><p className="text-gray-400 mb-2">Total Score</p><p className="text-6xl font-mono font-bold text-yellow-400">{currentScore}</p></div>
+                                <button onClick={() => setGameState('mode-select')} className="bg-blue-600 text-white px-10 py-4 rounded-full font-bold text-xl hover:bg-blue-700 shadow-xl">Back to Academy</button>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-screen bg-white text-gray-800 p-6 py-10">
+                        <div className="text-center animate-pop">
+                            <Award size={100} className="text-yellow-500 mx-auto mb-4" />
+                            <h2 className="text-4xl font-bold mb-2">{isTopicMastered ? "領域制霸！" : "關卡完成！"}</h2>
+                            <p className="text-xl text-gray-500 mb-6">Score: <span className="text-blue-600 font-bold text-3xl ml-2">{currentLevelScore}</span></p>
+                            <div className="flex gap-4 justify-center">
+                                <button onClick={() => startGame(selectedTopic, selectedLevel)} className="bg-gray-200 px-8 py-3 rounded-full font-bold hover:bg-gray-300">Replay</button>
+                                <button onClick={() => setGameState('level-select')} className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-700 shadow-lg">Continue</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderLevelSelect = () => {
+                const currentProgressVal = currentProgress[selectedTopic];
+                const LevelButton = ({ lvl, title, desc, numberColor }) => {
+                    const isLocked = lvl > currentProgressVal && currentProgressVal < 4;
+                    return (
+                        <button onClick={() => startGame(lvl)} disabled={isLocked} className={`relative p-6 rounded-xl flex items-center transition border-2 ${isLocked ? 'bg-black/20 border-white/10 opacity-60 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/30 cursor-pointer'}`}>
+                            {isLocked ? <div className="w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center mr-4"><Lock className="text-gray-400" /></div> : <div className={`${numberColor} text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl mr-4 shadow-lg`}>{lvl}</div>}
+                            <div className="text-left flex-1">
+                                <h3 className="font-bold text-xl">{title}</h3>
+                                <p className="text-sm opacity-70">{desc}</p>
+                            </div>
+                        </button>
+                    );
+                };
+
+                return (
+                    <div className={`flex flex-col items-center justify-center min-h-screen text-white p-6 py-10 ${mode === 'basic' ? 'bg-basic' : 'bg-advanced'}`}>
+                        <button onClick={() => setGameState('home')} className="absolute top-6 left-6 text-white/80 hover:text-white flex items-center gap-2 text-lg font-bold bg-black/20 px-4 py-2 rounded-full z-10"><ArrowLeft /> Back</button>
+                        <div className="mb-8 text-center animate-pop mt-10 md:mt-0"><h2 className="text-4xl font-bold mb-2">{mode === 'basic' ? "選擇等級" : "Select Level"}</h2></div>
+                        <div className="grid gap-4 w-full max-w-md">
+                            {[1, 2, 3].map(lvl => {
+                                const isLocked = lvl > currentProgressVal && currentProgressVal < 4;
+                                return (
+                                    <button key={lvl} onClick={() => { if(!isLocked) startGame(selectedTopic, lvl); }} disabled={isLocked} className={`relative p-6 rounded-xl flex items-center transition border-2 ${isLocked ? 'bg-black/20 border-white/10 opacity-60 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/30 cursor-pointer'}`}>
+                                        {isLocked ? <div className="w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center mr-4"><Lock className="text-gray-400" /></div> : <div className="bg-yellow-500 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl mr-4 shadow-lg">{lvl}</div>}
+                                        <div className="text-left flex-1"><h3 className="font-bold text-xl">Level {lvl}</h3><p className="text-sm opacity-70">{mode === 'basic' ? (lvl===1?"選擇題":lvl===2?"重組":"填空") : (lvl===1?"Choice":lvl===2?"Scramble":"Typing")}</p></div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            };
+
+            // Main Router
+            return (
+                <div className="min-h-screen">
+                    {gameState === 'mode-select' && renderModeSelection()}
+                    {gameState === 'home' && renderHome()}
+                    {gameState === 'level-select' && renderLevelSelect()}
+                    {gameState === 'playing' && renderGame()}
+                    {gameState === 'result' && renderResult()}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
